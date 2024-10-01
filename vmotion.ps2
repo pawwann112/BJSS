@@ -1,0 +1,116 @@
+Yes, you can **filter vMotion tasks by user** and/or the **day of the activity** using **PowerCLI**. The vCenter task log captures information such as the user who initiated the task and the time the task was performed, allowing you to filter vMotion tasks more precisely.
+
+Here’s how you can extend the PowerCLI script to include these filters:
+
+### 1. **Filter vMotion Tasks by User and Day of Activity**
+
+To track vMotion tasks initiated by a **specific user** or within a **specific date range**, you can modify the script to filter by the user’s name and date of the task.
+
+### 2. **Example PowerCLI Script: Filtering vMotion Tasks by User and Date**
+
+#### Step 1: Connect to vCenter
+
+```powershell
+# Connect to vCenter
+Connect-VIServer -Server "vcenter.example.com" -User "yourusername" -Password "yourpassword"
+```
+
+#### Step 2: Retrieve vMotion Tasks by User and Date Range
+
+You can filter the tasks based on both the **user who initiated the vMotion** and the **day of the task**.
+
+```powershell
+# Define parameters for filtering
+$user = "username@example.com"  # Replace with the user who initiated the vMotion
+$startDate = (Get-Date).AddDays(-1)  # Replace with the date of the activity (e.g., yesterday)
+$endDate = (Get-Date).AddHours(0)    # Up to the current time or modify as needed
+$originalLocationFile = "C:\vm_original_hosts_by_user.csv"
+
+# Get vMotion tasks initiated by the specified user and within the time range
+$vMotionTasks = Get-Task | Where-Object {
+    $_.Name -eq "MigrateVM" -and
+    $_.State -eq "success" -and
+    $_.StartTime -ge $startDate -and
+    $_.StartTime -le $endDate -and
+    $_.UserName -eq $user
+}
+
+# Create a list to store original VM host information
+$originalLocations = @()
+
+foreach ($task in $vMotionTasks) {
+    $vm = Get-VM -Id $task.Entity.Id
+    
+    # Get original source and destination hosts from the task details
+    $taskInfo = $task | Select-Object -ExpandProperty Info
+    $sourceHost = (Get-View $taskInfo.Source).Name
+    $destinationHost = (Get-View $taskInfo.Destination).Name
+
+    # Record the original host before the migration
+    $originalLocations += New-Object PSObject -Property @{
+        VMName = $vm.Name
+        OriginalHost = $sourceHost
+        CurrentHost = $destinationHost
+        TaskStartTime = $task.StartTime
+        UserInitiated = $task.UserName
+    }
+}
+
+# Save the VM original locations and task details to a CSV file
+$originalLocations | Export-Csv -Path $originalLocationFile -NoTypeInformation
+```
+
+### Explanation of Key Script Sections:
+
+1. **Task Filtering by User**:
+   - The line `$_UserName -eq $user` ensures that only the vMotion tasks initiated by the specified **user** are captured.
+   - Replace `"username@example.com"` with the actual **vCenter username** of the person who initiated the vMotion tasks.
+
+2. **Task Filtering by Date**:
+   - The `$_StartTime` filtering logic allows you to specify a **start date** and **end date** for task filtering.
+   - The example filters tasks performed **yesterday** by using `AddDays(-1)` for the `$startDate`. You can adjust this range to suit your needs.
+   
+3. **Retrieving VM and Host Information**:
+   - Similar to the previous script, this retrieves the **source host** and **destination host** for each vMotion task.
+   - It stores additional task details such as the **start time** and **user** who initiated the task.
+
+4. **Saving to CSV**:
+   - The results are saved in a CSV file that includes VM name, original host, current host, task start time, and the user who initiated the migration. This provides a record that can be used for reversing the vMotion later.
+
+### 3. **Reversing vMotion Using Tracked Information**
+
+Once the DR test is complete, you can reverse the vMotion using the original host information saved in the CSV file. The reverse vMotion can be initiated in a similar manner:
+
+```powershell
+# Load the original VM locations from CSV
+$originalLocationFile = "C:\vm_original_hosts_by_user.csv"
+$vmLocations = Import-Csv -Path $originalLocationFile
+
+foreach ($vmLocation in $vmLocations) {
+    # Get the VM and its original host
+    $vm = Get-VM -Name $vmLocation.VMName
+    $originalHost = Get-VMHost -Name $vmLocation.OriginalHost
+
+    # Perform vMotion back to the original host
+    Move-VM -VM $vm -Destination $originalHost
+}
+```
+
+### 4. **Additional Enhancements**:
+
+- **Date Range Flexibility**: You can easily modify the date range filters (e.g., set a fixed range for a DR test or any activity window).
+  
+- **Multi-User Tracking**: If multiple users initiate the vMotion tasks, you can filter for multiple usernames or remove the user filter to capture all vMotions during a specific time frame.
+
+- **Additional Filters**: You could filter further based on VM tags, folders, resource pools, or other criteria depending on the specific use case.
+
+### 5. **Verifying the Tasks in vCenter**:
+
+You can verify the details of vMotion tasks directly from the **vCenter Task Console** if needed:
+- **vSphere Web Client**: Go to **Tasks & Events** at the **Datacenter** or **Host** level and filter for **vMotion tasks**.
+- **PowerCLI**: The task properties captured (e.g., **StartTime**, **UserName**) allow easy verification against the vCenter logs.
+
+---
+
+### Summary:
+Using PowerCLI, you can track **vMotion tasks** initiated by a specific **user** and/or within a specific **day or date range**. This allows you to monitor the activity during DR tests or regular operations and, importantly, use that data to reverse the vMotions after the DR test is completed.
