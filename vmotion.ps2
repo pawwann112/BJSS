@@ -1,92 +1,98 @@
-Yes, you can track the **vMotion activity from vCenter tasks** and use this information to reverse the migration back to the original hosts. VMware vCenter logs every task, including **vMotion** operations, and you can leverage **PowerCLI** to retrieve the vMotion tasks and extract the relevant details such as the **source host**, **destination host**, and **timestamp**.
+To create a vRO (vRealize Orchestrator) standalone workflow that clones a VM from a template and applies guest customization using an existing customization spec in vCenter Server, we can modify the out-of-the-box workflow “Clone, Windows/Linux with single NIC.” This out-of-the-box workflow typically handles basic VM provisioning from a template, but we can tweak it to ensure it uses a predefined guest customization spec in vCenter.
 
-Here’s how you can achieve this:
+Here’s a high-level overview of the steps involved in creating the workflow:
 
-### 1. **Tracking vMotion Tasks in vCenter:**
+---
 
-You can query the **vCenter task history** using PowerCLI to identify **vMotion operations**. These tasks will include information such as:
-- **VM name**
-- **Source host** (from where the VM was migrated)
-- **Destination host** (where the VM was moved)
+### **Workflow Overview:**
+**Name:** Clone and Create VM from Template with Guest Customization Spec
 
-### 2. **PowerCLI Script to Retrieve vMotion Tasks:**
+**Steps:**
+1. **Input Parameters:** Define the input parameters for the workflow.
+2. **Find Template:** Locate the VM template in vCenter.
+3. **Select Datastore:** Choose the datastore where the new VM will be stored.
+4. **Clone VM:** Clone the VM using the `CloneVM_Task` method.
+5. **Guest Customization:** Apply the guest customization specification (an existing spec in vCenter).
+6. **Power On VM:** After the cloning and customization are complete, power on the VM.
+7. **Output Parameters:** Return relevant information about the new VM.
 
-You can retrieve vMotion tasks and store the original host information to reverse the vMotion later. Here's an example of how to do this:
+---
 
-#### Step 1: Connect to vCenter
-```powershell
-# Connect to vCenter
-Connect-VIServer -Server "vcenter.example.com" -User "yourusername" -Password "yourpassword"
-```
+### **Detailed Workflow Steps:**
 
-#### Step 2: Retrieve vMotion Tasks and Save Original Hosts
+#### 1. **Create Workflow:**
+- Open vRealize Orchestrator Client.
+- Create a new workflow and name it appropriately (e.g., "Clone VM with Guest Customization").
 
-```powershell
-# Define a file to save original VM location info
-$originalLocationFile = "C:\vm_original_hosts_from_tasks.csv"
+#### 2. **Input Parameters:**
+Define the following input parameters in the schema:
+- **vmTemplate** (Type: VC:VirtualMachine) – The VM template to clone.
+- **vmName** (Type: String) – The name of the new VM.
+- **datastore** (Type: VC:Datastore) – The datastore where the VM will be stored.
+- **resourcePool** (Type: VC:ResourcePool) – The resource pool in which the VM will be placed.
+- **host** (Type: VC:HostSystem) – The host to place the VM on (if needed).
+- **customizationSpecName** (Type: String) – The name of the guest customization spec in vCenter.
+- **folder** (Type: VC:VmFolder) – The folder where the VM will be placed.
 
-# Get vMotion tasks from vCenter within a specified time frame (e.g., past 24 hours)
-$vMotionTasks = Get-Task | Where-Object {
-    $_.Name -eq "MigrateVM" -and $_.State -eq "success" -and $_.StartTime -ge (Get-Date).AddHours(-24)
-}
+#### 3. **Locate VM Template (Optional):**
+- Use an out-of-the-box action such as `getAllVMsMatchingRegexp` to search and select the VM template if needed.
 
-# Create a list to store original VM host information
-$originalLocations = @()
-
-foreach ($task in $vMotionTasks) {
-    $vm = Get-VM -Id $task.Entity.Id
-    $sourceHost = $task.Info.DescriptionId # This should reflect the host migration
-
-    # Get original source and destination hosts from the task details
-    $taskInfo = $task | Select-Object -ExpandProperty Info
-    $sourceHost = (Get-View $taskInfo.Source).Name
-    $destinationHost = (Get-View $taskInfo.Destination).Name
-
-    # Record the original host before the migration
-    $originalLocations += New-Object PSObject -Property @{
-        VMName = $vm.Name
-        OriginalHost = $sourceHost
-        CurrentHost = $destinationHost
-    }
-}
-
-# Save the VM original locations to a CSV file
-$originalLocations | Export-Csv -Path $originalLocationFile -NoTypeInformation
-```
-
-### Key Points in the Script:
-- **Get-Task**: Retrieves the list of tasks from vCenter, filtered by `MigrateVM` to identify vMotion tasks.
-- **Task Filtering**: The script filters tasks for the **past 24 hours** (or another specified time frame) and only **successful** migrations.
-- **Original Host Information**: By extracting the **Source** and **Destination** details from each task, you record the original host information before the vMotion.
-- **CSV Output**: The VM names and original hosts are saved in a CSV file for later use during the reverse migration.
-
-### 3. **Reversing vMotion Using Tracked Information:**
-
-Once the DR test is completed, you can reverse the vMotion using the CSV file that contains the original host information retrieved from the vMotion tasks.
-
-```powershell
-# Load the original VM locations from CSV
-$originalLocationFile = "C:\vm_original_hosts_from_tasks.csv"
-$vmLocations = Import-Csv -Path $originalLocationFile
-
-foreach ($vmLocation in $vmLocations) {
-    # Get the VM and its original host
-    $vm = Get-VM -Name $vmLocation.VMName
-    $originalHost = Get-VMHost -Name $vmLocation.OriginalHost
-
-    # Perform vMotion back to the original host
-    Move-VM -VM $vm -Destination $originalHost
-}
-```
-
-### 4. **Detailed Explanation**:
-- **Tracking vMotion Tasks**: This script tracks all successful **vMotion (MigrateVM)** tasks from the vCenter **task history**.
-- **Source and Destination Hosts**: The `Info` property from the task contains both the source and destination host details, which allows you to know where the VM originally resided.
-- **CSV Storage**: The original and destination host information is saved into a CSV file, which can be used later to reverse the migration.
+#### 4. **Clone VM Task:**
+- Use the **"Clone Virtual Machine"** workflow element or JavaScript code to call the `CloneVM_Task` method from the vCenter API.
   
-### 5. **Other Considerations**:
-- **Task Retention**: Ensure that your **vCenter task retention** is set up appropriately so that you don't lose the task history for vMotions that were performed earlier. By default, vCenter may not store tasks for very long, so verify your **task and event retention policy** under **vCenter Settings**.
-- **Rollback of Datastore Migrations**: If your vMotion included datastore changes (Storage vMotion), ensure that you capture that information as well and include it in the reverse process by specifying the correct datastore in `Move-VM`.
+Add a scriptable task or use the **"CloneVM_Task"** method to clone the VM:
+```javascript
+// Retrieve the customization spec by name
+var customizationSpecMgr = vmTemplate.sdkConnection.customizationSpecManager;
+var specItem = customizationSpecMgr.getCustomizationSpec(customizationSpecName);
+var customizationSpec = specItem.spec;
 
-### Final Notes:
-This method provides a reliable way to reverse a vMotion activity based on actual task history, ensuring that VMs can be migrated back to their original hosts automatically without needing manual tracking.
+var relocateSpec = new VcVirtualMachineRelocateSpec();
+relocateSpec.datastore = datastore;
+relocateSpec.pool = resourcePool;
+
+var cloneSpec = new VcVirtualMachineCloneSpec();
+cloneSpec.location = relocateSpec;
+cloneSpec.customization = customizationSpec;  // Use the existing customization spec
+cloneSpec.powerOn = false; // We’ll power it on later manually
+
+var cloneTask = vmTemplate.cloneVM_Task(folder, vmName, cloneSpec);
+```
+
+#### 5. **Wait for Clone to Complete:**
+- Use **"Wait for Task End"** to ensure the clone task is complete.
+
+#### 6. **Power On the VM:**
+- After the VM is cloned and customized, power it on using the vCenter API.
+```javascript
+// Power on the newly created VM
+var newVM = cloneTask.info.result;
+newVM.powerOnVM_Task();
+```
+
+#### 7. **Output Parameters:**
+- Add an output parameter for the newly created VM:
+  - **vmOutput** (Type: VC:VirtualMachine) – The cloned VM object.
+
+---
+
+### **Workflow Schema:**
+1. **Start** – Initial point.
+2. **Scriptable Task (Locate VM Template)** – (Optional) Code to locate a VM template.
+3. **User Interaction (Select Datastore and Resources)** – (Optional) Prompt the user to select the datastore, host, and resource pool.
+4. **Clone VM Task** – A scriptable task using `CloneVM_Task` API, referencing the customization spec.
+5. **Wait for Clone to Complete** – An action that waits for the cloning task to finish.
+6. **Power On VM Task** – A scriptable task to power on the new VM.
+7. **End** – End of the workflow.
+
+---
+
+### **Customization and Enhancements:**
+- **Error Handling:** Add error handling mechanisms to handle cases where the clone fails or the customization spec is not found.
+- **Datastore Selection:** You can prompt the user to select a datastore or automatically assign one based on policy.
+- **Folder and Resource Pool:** Modify the workflow to allow dynamic folder and resource pool selection if required.
+- **Customization Spec:** Ensure that the customization spec exists in vCenter before applying it to avoid failures.
+
+---
+
+This workflow will allow you to clone a VM from a template, customize it using a predefined customization spec in vCenter, and then power on the VM. You can expand or modify this workflow further depending on your specific use case and requirements.
