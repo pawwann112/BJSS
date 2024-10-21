@@ -1,11 +1,26 @@
-// Retrieve the customization spec from the vCenter server
+// Input parameters provided by the user
+// These should be set as workflow inputs in vRO
+
+// Example of the inputs you need to add in vRO workflow as input parameters
+// var vmTemplate (type: VcVirtualMachine) - The VM template object to clone from
+// var vmName (type: String) - The name of the new VM
+// var datastore (type: VcDatastore) - The target datastore for the new VM
+// var resourcePool (type: VcResourcePool) - The resource pool for the new VM
+// var folder (type: VcFolder) - The folder where the new VM will be created
+// var customizationSpecName (type: String) - The name of the vCenter customization spec
+// var ipAddress (type: String) - The static IP address for the VM
+// var subnetMask (type: String) - The subnet mask for the VM
+// var defaultGateway (type: String) - The default gateway for the VM
+// var dnsServers (type: Array/String) - Array of DNS server IP addresses for the VM
+
+// Retrieve the customization spec from vCenter
 var customizationSpecMgr = vmTemplate.sdkConnection.customizationSpecManager;
 var specItem = customizationSpecMgr.getCustomizationSpec(customizationSpecName);
 var customizationSpec = specItem.spec;
 
 // Set the VM name in the customization spec
 customizationSpec.identity = new VcCustomizationFixedName();
-customizationSpec.identity.name = vmName; // Use the VM name dynamically
+customizationSpec.identity.name = vmName; // Use the user-provided VM name
 
 // Create a new IP configuration for the guest OS
 var adapterMapping = new VcCustomizationAdapterMapping();
@@ -13,29 +28,31 @@ adapterMapping.adapter = new VcCustomizationIPSettings();
 
 // Set the static IP address, subnet mask, and gateway
 adapterMapping.adapter.ip = new VcCustomizationFixedIp();
-adapterMapping.adapter.ip.ipAddress = "192.168.1.10"; // Replace with dynamic IP
-adapterMapping.adapter.subnetMask = "255.255.255.0"; // Replace with dynamic subnet mask
-adapterMapping.adapter.gateway = ["192.168.1.1"]; // Replace with dynamic gateway
+adapterMapping.adapter.ip.ipAddress = ipAddress; // Use user-provided IP address
+adapterMapping.adapter.subnetMask = subnetMask;  // Use user-provided subnet mask
+adapterMapping.adapter.gateway = [defaultGateway]; // Use user-provided default gateway
 
 // Set the DNS server(s)
-adapterMapping.adapter.dnsServerList = ["8.8.8.8", "8.8.4.4"]; // Replace with actual DNS servers
+adapterMapping.adapter.dnsServerList = dnsServers; // Use user-provided DNS servers
 
 // Apply the network configuration to the customization spec
 customizationSpec.nicSettingMap = [adapterMapping];
 
-// Optionally, set a time zone (for Windows guests)
+// Optionally, set a time zone (for Windows guests, if needed)
 customizationSpec.globalIPSettings = new VcCustomizationGlobalIPSettings();
-customizationSpec.globalIPSettings.dnsServerList = ["8.8.8.8", "8.8.4.4"]; // Optional: Add DNS servers to global settings
+customizationSpec.globalIPSettings.dnsServerList = dnsServers; // Apply global DNS servers
 
 // Setup the VM relocation and clone specifications
 var relocateSpec = new VcVirtualMachineRelocateSpec();
-relocateSpec.datastore = datastore;
-relocateSpec.pool = resourcePool;
+relocateSpec.datastore = datastore; // Use user-provided datastore
+relocateSpec.pool = resourcePool;   // Use user-provided resource pool
 
 var cloneSpec = new VcVirtualMachineCloneSpec();
 cloneSpec.location = relocateSpec;
 cloneSpec.customization = customizationSpec; // Apply the updated customization spec
-cloneSpec.powerOn = false;
+cloneSpec.powerOn = true; // Automatically power on the VM after cloning
 
 // Initiate the cloning task
 var cloneTask = vmTemplate.cloneVM_Task(folder, vmName, cloneSpec);
+
+// Optional: Monitor the task (if needed) for completion
