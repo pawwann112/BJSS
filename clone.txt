@@ -13,6 +13,7 @@
 // var subnetMask (type: String) - The subnet mask for the VM
 // var defaultGateway (type: String) - The default gateway for the VM
 // var dnsServers (type: Array/String) - Array of DNS server IP addresses for the VM
+// var networkName (type: String) - The name of the network/port group to connect the VM to
 
 // Search for the VM template by name
 var vmTemplate = VcPlugin.getAllVirtualMachines().find(function(vm) {
@@ -44,6 +45,16 @@ var resourcePool = host.parent.resourcePool.resourcePools.find(function(pool) {
 });
 if (!resourcePool) {
     throw "Resource Pool '" + resourcePoolName + "' not found on host '" + hostName + "'!";
+}
+
+// Search for the network/port group by name
+var network = VcPlugin.getAllDistributedVirtualPortgroups().find(function(net) {
+    return net.name == networkName;
+}) || VcPlugin.getAllNetworks().find(function(net) {
+    return net.name == networkName;
+});
+if (!network) {
+    throw "Network or Port Group '" + networkName + "' not found!";
 }
 
 // Retrieve the customization spec from vCenter
@@ -84,10 +95,27 @@ relocateSpec.datastore = datastore; // Use user-provided datastore
 relocateSpec.pool = resourcePool;   // Use user-provided resource pool
 relocateSpec.host = host;           // Use user-provided host
 
+// Create clone specification
 var cloneSpec = new VcVirtualMachineCloneSpec();
 cloneSpec.location = relocateSpec;
 cloneSpec.customization = customizationSpec; // Apply the updated customization spec
 cloneSpec.powerOn = true; // Automatically power on the VM after cloning
+
+// Set the network (port group) for the cloned VM
+var vmConfigSpec = new VcVirtualMachineConfigSpec();
+var networkDevice = vmTemplate.config.hardware.device.find(function(device) {
+    return device.deviceInfo.label.match(/Network Adapter/i);
+});
+if (!networkDevice) {
+    throw "Network Adapter not found in template '" + vmTemplateName + "'!";
+}
+var backingInfo = new VcVirtualEthernetCardNetworkBackingInfo();
+backingInfo.deviceName = network.name; // Connect the VM to the chosen network/port group
+networkDevice.backing = backingInfo;
+vmConfigSpec.deviceChange = [ new VcVirtualDeviceConfigSpec() ];
+vmConfigSpec.deviceChange[0].operation = VcVirtualDeviceConfigSpecOperation.edit;
+vmConfigSpec.deviceChange[0].device = networkDevice;
+cloneSpec.config = vmConfigSpec;
 
 // Initiate the cloning task
 var cloneTask = vmTemplate.cloneVM_Task(folder, vmName, cloneSpec);
