@@ -2,10 +2,11 @@
 // These should be set as workflow inputs in vRO
 
 // Example of the inputs you need to add in vRO workflow as input parameters
-// var vmTemplate (type: VcVirtualMachine) - The VM template object to clone from
+// var vmTemplateName (type: String) - The name of the VM template to clone from
 // var vmName (type: String) - The name of the new VM
-// var datastore (type: VcDatastore) - The target datastore for the new VM
-// var resourcePool (type: VcResourcePool) - The resource pool for the new VM
+// var datastoreName (type: String) - The name of the datastore where the VM will be stored
+// var hostName (type: String) - The name of the ESXi host to use
+// var resourcePoolName (type: String) - The name of the resource pool to assign
 // var folder (type: VcFolder) - The folder where the new VM will be created
 // var customizationSpecName (type: String) - The name of the vCenter customization spec
 // var ipAddress (type: String) - The static IP address for the VM
@@ -13,9 +14,44 @@
 // var defaultGateway (type: String) - The default gateway for the VM
 // var dnsServers (type: Array/String) - Array of DNS server IP addresses for the VM
 
+// Search for the VM template by name
+var vmTemplate = VcPlugin.getAllVirtualMachines().find(function(vm) {
+    return vm.name == vmTemplateName;
+});
+if (!vmTemplate) {
+    throw "Template '" + vmTemplateName + "' not found!";
+}
+
+// Search for the datastore by name
+var datastore = VcPlugin.getAllDatastores().find(function(ds) {
+    return ds.name == datastoreName;
+});
+if (!datastore) {
+    throw "Datastore '" + datastoreName + "' not found!";
+}
+
+// Search for the ESXi host by name
+var host = VcPlugin.getAllHostSystems().find(function(h) {
+    return h.name == hostName;
+});
+if (!host) {
+    throw "Host '" + hostName + "' not found!";
+}
+
+// Search for the resource pool by name (under the host)
+var resourcePool = host.parent.resourcePool.resourcePools.find(function(pool) {
+    return pool.name == resourcePoolName;
+});
+if (!resourcePool) {
+    throw "Resource Pool '" + resourcePoolName + "' not found on host '" + hostName + "'!";
+}
+
 // Retrieve the customization spec from vCenter
 var customizationSpecMgr = vmTemplate.sdkConnection.customizationSpecManager;
 var specItem = customizationSpecMgr.getCustomizationSpec(customizationSpecName);
+if (!specItem) {
+    throw "Customization Spec '" + customizationSpecName + "' not found!";
+}
 var customizationSpec = specItem.spec;
 
 // Set the VM name in the customization spec
@@ -46,6 +82,7 @@ customizationSpec.globalIPSettings.dnsServerList = dnsServers; // Apply global D
 var relocateSpec = new VcVirtualMachineRelocateSpec();
 relocateSpec.datastore = datastore; // Use user-provided datastore
 relocateSpec.pool = resourcePool;   // Use user-provided resource pool
+relocateSpec.host = host;           // Use user-provided host
 
 var cloneSpec = new VcVirtualMachineCloneSpec();
 cloneSpec.location = relocateSpec;
