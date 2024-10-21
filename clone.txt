@@ -1,0 +1,14 @@
+var customizationSpecMgr = vmTemplate.sdkConnection.customizationSpecManager;
+var specItem = customizationSpecMgr.getCustomizationSpec(customizationSpecName);
+var customizationSpec = specItem.spec;
+
+var relocateSpec = new VcVirtualMachineRelocateSpec();
+relocateSpec.datastore = datastore;
+relocateSpec.pool = resourcePool;
+
+var cloneSpec = new VcVirtualMachineCloneSpec();
+cloneSpec.location = relocateSpec;
+cloneSpec.customization = customizationSpec;
+cloneSpec.powerOn = false;
+
+var cloneTask = vmTemplate.cloneVM_Task(folder,vmName,cloneSpec);
