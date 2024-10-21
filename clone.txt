@@ -1,14 +1,41 @@
+// Retrieve the customization spec from the vCenter server
 var customizationSpecMgr = vmTemplate.sdkConnection.customizationSpecManager;
 var specItem = customizationSpecMgr.getCustomizationSpec(customizationSpecName);
 var customizationSpec = specItem.spec;
 
+// Set the VM name in the customization spec
+customizationSpec.identity = new VcCustomizationFixedName();
+customizationSpec.identity.name = vmName; // Use the VM name dynamically
+
+// Create a new IP configuration for the guest OS
+var adapterMapping = new VcCustomizationAdapterMapping();
+adapterMapping.adapter = new VcCustomizationIPSettings();
+
+// Set the static IP address, subnet mask, and gateway
+adapterMapping.adapter.ip = new VcCustomizationFixedIp();
+adapterMapping.adapter.ip.ipAddress = "192.168.1.10"; // Replace with dynamic IP
+adapterMapping.adapter.subnetMask = "255.255.255.0"; // Replace with dynamic subnet mask
+adapterMapping.adapter.gateway = ["192.168.1.1"]; // Replace with dynamic gateway
+
+// Set the DNS server(s)
+adapterMapping.adapter.dnsServerList = ["8.8.8.8", "8.8.4.4"]; // Replace with actual DNS servers
+
+// Apply the network configuration to the customization spec
+customizationSpec.nicSettingMap = [adapterMapping];
+
+// Optionally, set a time zone (for Windows guests)
+customizationSpec.globalIPSettings = new VcCustomizationGlobalIPSettings();
+customizationSpec.globalIPSettings.dnsServerList = ["8.8.8.8", "8.8.4.4"]; // Optional: Add DNS servers to global settings
+
+// Setup the VM relocation and clone specifications
 var relocateSpec = new VcVirtualMachineRelocateSpec();
 relocateSpec.datastore = datastore;
 relocateSpec.pool = resourcePool;
 
 var cloneSpec = new VcVirtualMachineCloneSpec();
 cloneSpec.location = relocateSpec;
-cloneSpec.customization = customizationSpec;
+cloneSpec.customization = customizationSpec; // Apply the updated customization spec
 cloneSpec.powerOn = false;
 
-var cloneTask = vmTemplate.cloneVM_Task(folder,vmName,cloneSpec);
+// Initiate the cloning task
+var cloneTask = vmTemplate.cloneVM_Task(folder, vmName, cloneSpec);
