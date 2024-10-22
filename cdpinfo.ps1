@@ -10,6 +10,9 @@ $vmHosts = Get-VMHost
 # Loop through each ESXi host
 foreach ($vmh in $vmHosts) {
 
+    # Get the cluster name
+    $cluster = Get-Cluster -VMHost $vmh | Select-Object -ExpandProperty Name
+
     # Check if the host is connected
     if ($vmh.State -ne "Connected") {
         Write-Output "Host $($vmh.Name) state is not connected, skipping."
@@ -29,9 +32,10 @@ foreach ($vmh in $vmHosts) {
                 if ($hint.ConnectedSwitchPort) {
                     # Create a custom object with the relevant data
                     $networkData += $hint.ConnectedSwitchPort | Select-Object `
-                        @{Name="VMHost"; Expression={$esxname}},
-                        @{Name="VMNic"; Expression={$physnic.Device}},
-                        DevId, Address, PortId, HardwarePlatform
+                        @{Name="Cluster"; Expression={$cluster}},         # Cluster Name
+                        @{Name="VMHost"; Expression={$esxname}},          # ESXi Host Name
+                        @{Name="VMNic"; Expression={$physnic.Device}},    # NIC Device
+                        DevId, Address, PortId, HardwarePlatform          # CDP Info
                 }
                 else {
                     Write-Host "No CDP information available for $($physnic.Device) on $($esxname)."
