@@ -5,21 +5,23 @@ Connect-VIServer -Server "Your-vCenter-Server" -User "Your-Username" -Password "
 $csvPath = "C:\Path\To\Your\groups.csv"
 $groups = Import-Csv -Path $csvPath
 
-# Define a common description for all groups
+# Define the SSO domain and a common description for all groups
+$ssoDomain = "vs6bjss.local"
 $commonDescription = "Group for Power VM users"
 
-# Loop through each group in the CSV and create the local group
+# Loop through each group in the CSV and create the SSO group
 foreach ($group in $groups) {
     $groupName = $group.GroupName
+    $fullGroupName = "$ssoDomain\\$groupName"  # Format for the full SSO group name
 
-    # Check if the group already exists
-    $existingGroup = Get-VMHostAccount -Group -Id $groupName -ErrorAction SilentlyContinue
+    # Check if the group already exists in the SSO domain
+    $existingGroup = Get-SsoGroup -Domain $ssoDomain -SearchText $groupName -ErrorAction SilentlyContinue
     if ($existingGroup) {
-        Write-Host "Group '$groupName' already exists. Skipping creation."
+        Write-Host "SSO Group '$fullGroupName' already exists. Skipping creation."
     } else {
-        # Create the local group on the ESXi hosts
-        New-VMHostAccount -Group -Id $groupName -Description $commonDescription -Confirm:$false
-        Write-Host "Group '$groupName' created successfully with the description: '$commonDescription'."
+        # Create the SSO group
+        New-SsoGroup -Domain $ssoDomain -Name $groupName -Description $commonDescription
+        Write-Host "SSO Group '$fullGroupName' created successfully with the description: '$commonDescription'."
     }
 }
 
