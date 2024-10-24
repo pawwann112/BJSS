@@ -1,0 +1,27 @@
+# Connect to the vSphere server (Replace with your vCenter details)
+Connect-VIServer -Server "Your-vCenter-Server" -User "Your-Username" -Password "Your-Password"
+
+# Import the CSV file (change the path as per your environment)
+$csvPath = "C:\Path\To\Your\groups.csv"
+$groups = Import-Csv -Path $csvPath
+
+# Define a common description for all groups
+$commonDescription = "Group for Power VM users"
+
+# Loop through each group in the CSV and create the local group
+foreach ($group in $groups) {
+    $groupName = $group.GroupName
+
+    # Check if the group already exists
+    $existingGroup = Get-VMHostAccount -Group -Id $groupName -ErrorAction SilentlyContinue
+    if ($existingGroup) {
+        Write-Host "Group '$groupName' already exists. Skipping creation."
+    } else {
+        # Create the local group on the ESXi hosts
+        New-VMHostAccount -Group -Id $groupName -Description $commonDescription -Confirm:$false
+        Write-Host "Group '$groupName' created successfully with the description: '$commonDescription'."
+    }
+}
+
+# Disconnect from the vSphere server
+Disconnect-VIServer -Confirm:$false
