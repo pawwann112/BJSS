@@ -1,0 +1,19 @@
+# Connect to vCenter
+$vcenterServer = "YourVCenterServer"  # Replace with your vCenter server address
+Connect-VIServer -Server $vcenterServer
+
+# Retrieve all templates
+$templates = Get-Template
+
+# Display template information: Name, Location, and Creation Date
+$templates | ForEach-Object {
+    $templateInfo = @{
+        Name = $_.Name
+        Location = $_.Folder.FullPath   # Retrieves the folder location of the template
+        CreationDate = $_.ExtensionData.Config.CreateDate  # Creation date from the template configuration
+    }
+    New-Object -TypeName PSObject -Property $templateInfo
+}
+
+# Disconnect from vCenter
+Disconnect-VIServer -Server $vcenterServer -Confirm:$false
