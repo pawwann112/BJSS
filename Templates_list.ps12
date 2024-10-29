@@ -1,19 +1,2 @@
-# Connect to vCenter
-$vcenterServer = "YourVCenterServer"  # Replace with your vCenter server address
-Connect-VIServer -Server $vcenterServer
+Get-Template | Select Name, @{N="Host";E={(Get-VMhost -id $_.HostID).Name}}, @{N="Datastore"; E={(Get-Datastore -id $_.DatastoreIDlist).Name -join ","}} | FT -AutoSize
 
-# Retrieve all templates
-$templates = Get-Template
-
-# Display template information: Name, Datastore, and Creation Date
-$templates | ForEach-Object {
-    $templateInfo = @{
-        Name = $_.Name
-        Datastore = $_.Datastore[0].Name  # Retrieves the name of the datastore where the template is stored
-        CreationDate = $_.ExtensionData.Config.CreateDate  # Creation date from the template configuration
-    }
-    New-Object -TypeName PSObject -Property $templateInfo
-}
-
-# Disconnect from vCenter
-Disconnect-VIServer -Server $vcenterServer -Confirm:$false
