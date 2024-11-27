@@ -1,11 +1,11 @@
 # Input Parameters
 param (
     [string]$vcFqdn = 'ch-sv01993.group.intra',
-    [string]$vcUser = 'administrator@vs6bjss.local',
+    [string]$vcUser = 'Administrator@vs6bjss.local',
     [string]$vcPassword = 'hzZcL$fT8wGz9',
-    [string]$ldapDomain = 'group.intra',
-    [string]$csvFilePath,    # Path to CSV file containing list of users
-    [string]$ssoGroup        # SSO group to add users to
+    [string]$ldapDomain = 'vs6bjss.local',
+    [string]$csvFilePath = "C:\Users\ADM_ALPA\Downloads\users.csv" ,    # Path to CSV file containing list of users
+    [string]$ssoGroup = "BJSS-VM-Power-GVA"       # SSO group to add users to
 )
 
 # Connect to the SSO Admin Server
