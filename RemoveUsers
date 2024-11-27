@@ -1,0 +1,37 @@
+# Input Parameters
+param (
+    [string]$vcFqdn = 'ch-sv01993.group.intra',
+    [string]$vcUser = 'Administrator@vs6bjss.local',
+    [string]$vcPassword = 'hzZcL$fT8wGz9',
+    [string]$ldapDomain = 'vs6bjss.local',
+    [string]$csvFilePath = "C:\Users\ADM_ALPA\Downloads\users.csv",    # Path to CSV file containing list of users
+    [string]$ssoGroup = "BJSS-VM-Power-GVA"       # SSO group to remove users from
+)
+
+# Connect to the SSO Admin Server
+$ssoConnection = Connect-SsoAdminServer -Server $vcFqdn -User $vcUser -Password $vcPassword -SkipCertificateCheck
+
+# Get the target SSO group
+$targetGroup = Get-SsoGroup -Domain 'vs6bjss.local' -Name $ssoGroup -Server $ssoConnection
+
+# Import users from CSV file
+$users = Import-Csv -Path $csvFilePath
+
+# Loop through each user in the CSV and remove from the SSO group
+foreach ($user in $users) {
+    $userName = $user.UserName   # Assume 'UserName' is the column name in the CSV
+
+    # Get the user from the SSO domain
+    $ldapUserToRemove = Get-SsoPersonUser -Domain $ldapDomain -Name $userName -Server $ssoConnection
+
+    # Remove user from the SSO group
+    if ($ldapUserToRemove) {
+        $ldapUserToRemove | Remove-UserFromSsoGroup -TargetGroup $targetGroup
+        Write-Host "Removed user $userName from group $ssoGroup."
+    } else {
+        Write-Host "User $userName not found in domain $ldapDomain."
+    }
+}
+
+# Disconnect from the SSO Admin Server
+Disconnect-SsoAdminServer -Server $ssoConnection
