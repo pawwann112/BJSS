@@ -1,0 +1,30 @@
+Here’s a professional email draft to Cisco Support:
+
+---
+
+**Subject:** Assistance Required: Enabling Drive Security with Hardware Encryption on Cisco UCS C2200 M6  
+
+Dear Cisco Support Team,  
+
+I hope this email finds you well.  
+
+I am currently working on configuring drive security with hardware encryption on a Cisco UCS C2200 M6 server. I would appreciate your guidance on the following:  
+1. **Documentation:** Could you provide specific documentation or a step-by-step guide for enabling hardware encryption using Self-Encrypting Drives (SEDs) on this model?  
+2. **Hardware Requirements:** What are the exact hardware requirements, such as compatible drives and RAID controllers, for this setup?  
+3. **Configuration Support:** Are there any best practices or key considerations while configuring encryption and managing keys via Cisco IMC or other tools?  
+
+If there are additional tools, software, or licenses needed to enable this feature, kindly share the details.  
+
+Your assistance will be invaluable in ensuring the security configuration is implemented effectively. Please let me know if you need more details regarding my current setup.  
+
+Looking forward to your response.  
+
+Best regards,  
+[Your Full Name]  
+[Your Position]  
+[Your Company Name]  
+[Your Contact Information]  
+
+--- 
+
+Feel free to personalize it further based on your needs.
