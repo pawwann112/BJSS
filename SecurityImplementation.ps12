@@ -1,21 +1,48 @@
+# Importing the PowerCLI module
+Import-Module VMware.PowerCLI
+
 # Connecting to the vCenter Server
-Connect-ViServer -Server ch-sv01993.group.intra -User $LoginUser
+$vCenterServer = "ch-sv01993.group.intra"
+$LoginUser = "your-username"
+$LoginPassword = "your-password"
 
-get-vmhost | Get-AdvancedSetting Security.AccountUnlockTime | Set-AdvancedSetting -Value 900
-get-vmhost | Get-AdvancedSetting Security.AccountLockFailures | Set-AdvancedSetting -Value 3
-get-vmhost | Get-AdvancedSetting Security.PasswordHistory | Set-AdvancedSetting -Value 5
-Get-VMHost | Get-AdvancedSetting Security.PasswordQualityControl | Set-AdvancedSetting -Value "similar=deny retry=3 min=disabled,disabled,disabled,14,14"
-get-vmhost | Get-AdvancedSetting UserVars.SuppressHyperthreadWarning | Set-AdvancedSetting -Value 0
-get-vmhost | Get-AdvancedSetting UserVars.DcuiTimeOut |Set-AdvancedSetting -Value 600
-Get-VMHost | Get-AdvancedSetting UserVars.ESXiShellInteractiveTimeOut | Set-AdvancedSetting -Value 600
-Get-VMHost | Get-AdvancedSetting UserVars.ESXiShellTimeOut | Set-AdvancedSetting -Value 600
-Get-vmhost | Get-AdvancedSetting Net.BlockGuestBPDU |Set-AdvancedSetting -Value 1
-Get-VMHost | Get-AdvancedSetting UserVars.SuppressShellWarning | Set-AdvancedSetting -Value 0
+Connect-ViServer -Server $vCenterServer -User $LoginUser -Password $LoginPassword
 
-#ForgedTransmit for vSwitch
-Get-VirtualSwitch | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmits $false
-Get-VirtualPortGroup | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmitsInherited $true
+# List of clusters to apply the settings
+$clusters = @("Cluster1", "Cluster2", "Cluster3")  # Replace with your cluster names
 
-# Configure remote logging.
-Get-VMHost | Get-AdvancedSetting Syslog.global.logHost | Format-Table Entity, Value
-Get-VMHost | Get-AdvancedSetting Syslog.global.logHost | Set-AdvancedSetting -Value udp://160.219.63.155:514
+# Loop through each cluster
+foreach ($clusterName in $clusters) {
+    Write-Host "Processing cluster: $clusterName"
+    
+    # Get all hosts in the current cluster
+    $vmHosts = Get-Cluster -Name $clusterName | Get-VMHost
+    
+    foreach ($vmHost in $vmHosts) {
+        Write-Host "Configuring host: $($vmHost.Name)"
+        
+        # Security Settings
+        $vmHost | Get-AdvancedSetting -Name "Security.AccountUnlockTime" | Set-AdvancedSetting -Value 900
+        $vmHost | Get-AdvancedSetting -Name "Security.AccountLockFailures" | Set-AdvancedSetting -Value 3
+        $vmHost | Get-AdvancedSetting -Name "Security.PasswordHistory" | Set-AdvancedSetting -Value 5
+        $vmHost | Get-AdvancedSetting -Name "Security.PasswordQualityControl" | Set-AdvancedSetting -Value "similar=deny retry=3 min=disabled,disabled,disabled,14,14"
+        
+        # User and Shell Settings
+        $vmHost | Get-AdvancedSetting -Name "UserVars.SuppressHyperthreadWarning" | Set-AdvancedSetting -Value 0
+        $vmHost | Get-AdvancedSetting -Name "UserVars.DcuiTimeOut" | Set-AdvancedSetting -Value 600
+        $vmHost | Get-AdvancedSetting -Name "UserVars.ESXiShellInteractiveTimeOut" | Set-AdvancedSetting -Value 600
+        $vmHost | Get-AdvancedSetting -Name "UserVars.ESXiShellTimeOut" | Set-AdvancedSetting -Value 600
+        $vmHost | Get-AdvancedSetting -Name "Net.BlockGuestBPDU" | Set-AdvancedSetting -Value 1
+        $vmHost | Get-AdvancedSetting -Name "UserVars.SuppressShellWarning" | Set-AdvancedSetting -Value 0
+        
+        # vSwitch Security Settings
+        $vmHost | Get-VirtualSwitch | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmits $false
+        $vmHost | Get-VirtualPortGroup | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmitsInherited $true
+        
+        # Remote Logging
+        $vmHost | Get-AdvancedSetting -Name "Syslog.global.logHost" | Set-AdvancedSetting -Value "udp://160.219.63.155:514"
+    }
+}
+
+# Disconnect from vCenter Server
+Disconnect-ViServer -Server $vCenterServer -Confirm:$false
