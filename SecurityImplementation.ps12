@@ -128,3 +128,32 @@ Disconnect-ViServer -Server $vCenterServer -Confirm:$false
 
 Write-Host "Configuration complete. Logs can be found at $logFile"
 
+
+# Importing the PowerCLI module
+Import-Module VMware.PowerCLI
+
+# Connecting to the vCenter Server
+$vCenterServer = "your-vcenter-server"
+$LoginUser = "your-username"
+$LoginPassword = "your-password"
+
+Connect-ViServer -Server $vCenterServer -User $LoginUser -Password $LoginPassword
+
+# Fetch and list all clusters
+Write-Host "Clusters in vCenter:"
+$clusters = Get-Cluster
+foreach ($cluster in $clusters) {
+    Write-Host "- Cluster Name: $($cluster.Name)"
+}
+
+# Fetch and list all host folders
+Write-Host "Host Folders in vCenter:"
+$hostFolders = Get-Folder -Type VMHost
+foreach ($folder in $hostFolders) {
+    Write-Host "- Folder Name: $($folder.Name)"
+}
+
+# Disconnect from vCenter Server
+Disconnect-ViServer -Server $vCenterServer -Confirm:$false
+
+Write-Host "Listing complete."
