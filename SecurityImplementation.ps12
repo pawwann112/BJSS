@@ -1,0 +1,21 @@
+# Connecting to the vCenter Server
+Connect-ViServer -Server ch-sv01993.group.intra -User $LoginUser
+
+get-vmhost | Get-AdvancedSetting Security.AccountUnlockTime | Set-AdvancedSetting -Value 900
+get-vmhost | Get-AdvancedSetting Security.AccountLockFailures | Set-AdvancedSetting -Value 3
+get-vmhost | Get-AdvancedSetting Security.PasswordHistory | Set-AdvancedSetting -Value 5
+Get-VMHost | Get-AdvancedSetting Security.PasswordQualityControl | Set-AdvancedSetting -Value "similar=deny retry=3 min=disabled,disabled,disabled,14,14"
+get-vmhost | Get-AdvancedSetting UserVars.SuppressHyperthreadWarning | Set-AdvancedSetting -Value 0
+get-vmhost | Get-AdvancedSetting UserVars.DcuiTimeOut |Set-AdvancedSetting -Value 600
+Get-VMHost | Get-AdvancedSetting UserVars.ESXiShellInteractiveTimeOut | Set-AdvancedSetting -Value 600
+Get-VMHost | Get-AdvancedSetting UserVars.ESXiShellTimeOut | Set-AdvancedSetting -Value 600
+Get-vmhost | Get-AdvancedSetting Net.BlockGuestBPDU |Set-AdvancedSetting -Value 1
+Get-VMHost | Get-AdvancedSetting UserVars.SuppressShellWarning | Set-AdvancedSetting -Value 0
+
+#ForgedTransmit for vSwitch
+Get-VirtualSwitch | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmits $false
+Get-VirtualPortGroup | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmitsInherited $true
+
+# Configure remote logging.
+Get-VMHost | Get-AdvancedSetting Syslog.global.logHost | Format-Table Entity, Value
+Get-VMHost | Get-AdvancedSetting Syslog.global.logHost | Set-AdvancedSetting -Value udp://160.219.63.155:514
