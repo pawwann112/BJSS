@@ -1,0 +1,17 @@
+$VC1="ch-sv01993.group.intra"
+$VC2="ch-sv02320.group.intra"
+$VC3="ch-sv03944.group.intra"
+$VC4="sg-sv04253.group.intra"
+
+Connect-VIServer -Server $VC1,$VC4
+$roles= Get-VIRole -Name "BJSS Virtual machine power user"
+
+foreach ($role in $roles) {
+[string[]]$privsforRoleAfromVC1=Get-VIPrivilege -Role (Get-VIRole -Name $role -server $VC1) |%{$_.id}
+ 
+# Create new role in VC4
+New-VIRole -name $role -Server $VC4
+ 
+# Add Privileges to new role.
+Set-VIRole -role (get-virole -Name $role -Server $VC4) -AddPrivilege (get-viprivilege -id $privsforRoleAfromVC1 -server $VC2)
+}
