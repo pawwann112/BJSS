@@ -15,3 +15,35 @@ New-VIRole -name $role -Server $VC4
 # Add Privileges to new role.
 Set-VIRole -role (get-virole -Name $role -Server $VC4) -AddPrivilege (get-viprivilege -id $privsforRoleAfromVC1 -server $VC2)
 }
+
+
+# Define the vCenter servers
+$VC1 = "ch-sv01993.group.intra"
+$VC4 = "sg-sv04253.group.intra"
+
+# Connect to both vCenters
+Connect-VIServer -Server $VC1,$VC4
+
+# Name of the role to copy
+$roleName = "BJSS Virtual machine power user"
+
+# Retrieve the role from VC1
+$roleFromVC1 = Get-VIRole -Name $roleName -Server $VC1
+
+if ($roleFromVC1) {
+    # Get privileges associated with the role from VC1
+    $privileges = Get-VIPrivilege -Role $roleFromVC1 -Server $VC1 | Select-Object -ExpandProperty Id
+
+    # Create the role in VC4
+    $newRole = New-VIRole -Name $roleName -Server $VC4
+
+    # Add privileges to the new role on VC4
+    Set-VIRole -Role $newRole -AddPrivilege $privileges -Server $VC4
+
+    Write-Host "Role '$roleName' successfully copied from $VC1 to $VC4."
+} else {
+    Write-Host "Role '$roleName' not found on $VC1."
+}
+
+# Disconnect from both vCenters
+Disconnect-VIServer -Server $VC1,$VC4 -Confirm:$false
