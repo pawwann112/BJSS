@@ -1,15 +1,13 @@
-# Importing the PowerCLI module
-Import-Module VMware.PowerCLI
 
 # Connecting to the vCenter Server
 $vCenterServer = "ch-sv01993.group.intra"
-$LoginUser = "your-username"
-$LoginPassword = "your-password"
+$LoginUser = "adm_alpa@group.intra"
 
-Connect-ViServer -Server $vCenterServer -User $LoginUser -Password $LoginPassword
+
+Connect-VIServer -Server $vCenterServer 
 
 # List of clusters to apply the settings
-$clusters = @("Cluster1", "Cluster2", "Cluster3")  # Replace with your cluster names
+$clusters = @("DEVVDI","TSTDMZECOM","SINGAPORETSTGITS","TSTATP","TSTINTWIN","TSTDMZ","CORE BANKING COMPONENTS","WEALTH-SQL-UAT-SEC","UNBLU-PRD","DMZLX","DMZINFRA","WEALTH-SQL-PRD","ELK","VAULT","NETWORK","DLP","IDM","DMZGITS","DMZECOM","UNBLU-UAT","INTWIN","DMZTRAD","DMZGITS-VDI","DMZWINCORE","SECURITY","INTDW","INTLX-Stage","INTLX","DMZWIN","HID-CL")  # Replace with your cluster names
 
 # Log file location
 $logFile = "C:\VMHostSettingsLog.txt"
@@ -31,11 +29,9 @@ foreach ($clusterName in $clusters) {
             "Security.AccountLockFailures" = 3
             "Security.PasswordHistory" = 5
             "Security.PasswordQualityControl" = "similar=deny retry=3 min=disabled,disabled,disabled,14,14"
-            "UserVars.SuppressHyperthreadWarning" = 0
             "UserVars.DcuiTimeOut" = 600
             "UserVars.ESXiShellInteractiveTimeOut" = 600
             "UserVars.ESXiShellTimeOut" = 600
-            "Net.BlockGuestBPDU" = 1
             "UserVars.SuppressShellWarning" = 0
             "Syslog.global.logHost" = "udp://160.219.63.155:514"
         }
@@ -48,10 +44,10 @@ foreach ($clusterName in $clusters) {
         }
         
         # vSwitch Security Settings
-        $vmHost | Get-VirtualSwitch | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmits $false -Confirm:$false
+        $vmHost | Get-VirtualSwitch -Standard | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmits $false -Confirm:$false
         Add-Content -Path $logFile -Value "Set ForgedTransmits to $false on virtual switches of $($vmHost.Name)"
         
-        $vmHost | Get-VirtualPortGroup | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmitsInherited $true -Confirm:$false
+        $vmHost | Get-VirtualPortGroup -Standard | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmitsInherited $true -Confirm:$false
         Add-Content -Path $logFile -Value "Set ForgedTransmitsInherited to $true on virtual port groups of $($vmHost.Name)"
     }
 }
@@ -60,195 +56,3 @@ foreach ($clusterName in $clusters) {
 Disconnect-ViServer -Server $vCenterServer -Confirm:$false
 
 Write-Host "Configuration complete. Logs can be found at $logFile"
-
-
-
-
-
-# Importing the PowerCLI module
-Import-Module VMware.PowerCLI
-
-# Connecting to the vCenter Server
-$vCenterServer = "ch-sv01993.group.intra"
-$LoginUser = "your-username"
-$LoginPassword = "your-password"
-
-Connect-ViServer -Server $vCenterServer -User $LoginUser -Password $LoginPassword
-
-# List of host folders to apply the settings
-$hostFolders = @("HostFolder1", "HostFolder2", "HostFolder3")  # Replace with your host folder names
-
-# Log file location
-$logFile = "C:\VMHostSettingsLog.txt"
-
-# Loop through each host folder
-foreach ($folderName in $hostFolders) {
-    Write-Host "Processing host folder: $folderName"
-    
-    # Get all hosts in the current host folder
-    $vmHosts = Get-Folder -Name $folderName | Get-VMHost
-    
-    foreach ($vmHost in $vmHosts) {
-        Write-Host "Configuring host: $($vmHost.Name)"
-        Add-Content -Path $logFile -Value "Configuring host: $($vmHost.Name) in folder: $folderName"
-
-        # Define a hashtable of settings to apply
-        $settings = @{
-            "Security.AccountUnlockTime" = 900
-            "Security.AccountLockFailures" = 3
-            "Security.PasswordHistory" = 5
-            "Security.PasswordQualityControl" = "similar=deny retry=3 min=disabled,disabled,disabled,14,14"
-            "UserVars.SuppressHyperthreadWarning" = 0
-            "UserVars.DcuiTimeOut" = 600
-            "UserVars.ESXiShellInteractiveTimeOut" = 600
-            "UserVars.ESXiShellTimeOut" = 600
-            "Net.BlockGuestBPDU" = 1
-            "UserVars.SuppressShellWarning" = 0
-            "Syslog.global.logHost" = "udp://160.219.63.155:514"
-        }
-        
-        # Apply each setting
-        foreach ($setting in $settings.GetEnumerator()) {
-            $advancedSetting = $vmHost | Get-AdvancedSetting -Name $setting.Key
-            $advancedSetting | Set-AdvancedSetting -Value $setting.Value -Confirm:$false
-            Add-Content -Path $logFile -Value "Set $($setting.Key) to $($setting.Value) on $($vmHost.Name)"
-        }
-        
-        # vSwitch Security Settings (Exclude Distributed Switches)
-        $vmHost | Get-VirtualSwitch -Standard | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmits $false -Confirm:$false
-        Add-Content -Path $logFile -Value "Set ForgedTransmits to $false on standard virtual switches of $($vmHost.Name)"
-        
-        $vmHost | Get-VirtualPortGroup -Standard | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmitsInherited $true -Confirm:$false
-        Add-Content -Path $logFile -Value "Set ForgedTransmitsInherited to $true on standard port groups of $($vmHost.Name)"
-    }
-}
-
-# Disconnect from vCenter Server
-Disconnect-ViServer -Server $vCenterServer -Confirm:$false
-
-Write-Host "Configuration complete. Logs can be found at $logFile"
-
-
-# Importing the PowerCLI module
-Import-Module VMware.PowerCLI
-
-# Connecting to the vCenter Server
-$vCenterServer = "your-vcenter-server"
-$LoginUser = "your-username"
-$LoginPassword = "your-password"
-
-Connect-ViServer -Server $vCenterServer -User $LoginUser -Password $LoginPassword
-
-# Fetch and list all clusters
-Write-Host "Clusters in vCenter:"
-$clusters = Get-Cluster
-foreach ($cluster in $clusters) {
-    Write-Host "- Cluster Name: $($cluster.Name)"
-}
-
-# Fetch and list all host folders
-Write-Host "Host Folders in vCenter:"
-$hostFolders = Get-Folder -Type VMHost
-foreach ($folder in $hostFolders) {
-    Write-Host "- Folder Name: $($folder.Name)"
-}
-
-# Disconnect from vCenter Server
-Disconnect-ViServer -Server $vCenterServer -Confirm:$false
-
-Write-Host "Listing complete."
-
-
-# Load PowerCLI module
-Import-Module VMware.PowerCLI
-
-# Connect to vCenter
-$vCenterServer = "vcenter.domain.com"
-Connect-VIServer -Server $vCenterServer
-
-# List of ESXi hosts
-$esxiHosts = @(
-    "esxi-host1.domain.com",
-    "esxi-host2.domain.com",
-    "esxi-host3.domain.com"
-)
-
-# Name of the Standard Switch
-$standardSwitchName = "vSwitch0"
-
-foreach ($esxiHost in $esxiHosts) {
-    # Get the host system object
-    $host = Get-VMHost -Name $esxiHost
-    
-    if ($host) {
-        Write-Host "Updating security policy for $esxiHost..."
-
-        # Get the standard switch
-        $switch = Get-VirtualSwitch -VMHost $host -Name $standardSwitchName
-        
-        if ($switch) {
-            # Get the current security policy
-            $securityPolicy = Get-SecurityPolicy -VirtualSwitch $switch
-            
-            # Modify the "Mac Address Changes" policy to false
-            $securityPolicy.AllowMacChanges = $false
-            
-            # Apply the updated security policy back to the switch
-            Set-SecurityPolicy -VirtualSwitch $switch -SecurityPolicy $securityPolicy
-            
-            Write-Host "Updated MAC Address Changes policy for $standardSwitchName on $esxiHost."
-        } else {
-            Write-Host "Standard switch $standardSwitchName not found on $esxiHost."
-        }
-    } else {
-        Write-Host "ESXi host $esxiHost not found."
-    }
-}
-
-# Disconnect from vCenter
-Disconnect-VIServer -Server $vCenterServer -Confirm:$false
-
-
-# Load PowerCLI module
-Import-Module VMware.PowerCLI
-
-# Connect to vCenter
-$vCenterServer = "vcenter.domain.com"
-Connect-VIServer -Server $vCenterServer
-
-# List of ESXi hosts
-$esxiHosts = @(
-    "esxi-host1.domain.com",
-    "esxi-host2.domain.com",
-    "esxi-host3.domain.com"
-)
-
-foreach ($esxiHost in $esxiHosts) {
-    # Get the host system object
-    $host = Get-VMHost -Name $esxiHost
-    
-    if ($host) {
-        Write-Host "Updating security policy for all standard switches on $esxiHost..."
-        
-        # Get all standard switches on the host
-        $switches = Get-VirtualSwitch -VMHost $host | Where-Object {$_.ExtensionData.GetType().Name -eq 'HostStandardSwitch'}
-
-        foreach ($switch in $switches) {
-            # Get the current security policy
-            $securityPolicy = Get-SecurityPolicy -VirtualSwitch $switch
-            
-            # Modify the "Mac Address Changes" policy to false
-            $securityPolicy.AllowMacChanges = $false
-            
-            # Apply the updated security policy back to the switch
-            Set-SecurityPolicy -VirtualSwitch $switch -SecurityPolicy $securityPolicy
-            
-            Write-Host "Updated MAC Address Changes policy for $($switch.Name) on $esxiHost."
-        }
-    } else {
-        Write-Host "ESXi host $esxiHost not found."
-    }
-}
-
-# Disconnect from vCenter
-Disconnect-VIServer -Server $vCenterServer -Confirm:$false
