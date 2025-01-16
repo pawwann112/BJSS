@@ -208,3 +208,47 @@ foreach ($esxiHost in $esxiHosts) {
 # Disconnect from vCenter
 Disconnect-VIServer -Server $vCenterServer -Confirm:$false
 
+
+# Load PowerCLI module
+Import-Module VMware.PowerCLI
+
+# Connect to vCenter
+$vCenterServer = "vcenter.domain.com"
+Connect-VIServer -Server $vCenterServer
+
+# List of ESXi hosts
+$esxiHosts = @(
+    "esxi-host1.domain.com",
+    "esxi-host2.domain.com",
+    "esxi-host3.domain.com"
+)
+
+foreach ($esxiHost in $esxiHosts) {
+    # Get the host system object
+    $host = Get-VMHost -Name $esxiHost
+    
+    if ($host) {
+        Write-Host "Updating security policy for all standard switches on $esxiHost..."
+        
+        # Get all standard switches on the host
+        $switches = Get-VirtualSwitch -VMHost $host | Where-Object {$_.ExtensionData.GetType().Name -eq 'HostStandardSwitch'}
+
+        foreach ($switch in $switches) {
+            # Get the current security policy
+            $securityPolicy = Get-SecurityPolicy -VirtualSwitch $switch
+            
+            # Modify the "Mac Address Changes" policy to false
+            $securityPolicy.AllowMacChanges = $false
+            
+            # Apply the updated security policy back to the switch
+            Set-SecurityPolicy -VirtualSwitch $switch -SecurityPolicy $securityPolicy
+            
+            Write-Host "Updated MAC Address Changes policy for $($switch.Name) on $esxiHost."
+        }
+    } else {
+        Write-Host "ESXi host $esxiHost not found."
+    }
+}
+
+# Disconnect from vCenter
+Disconnect-VIServer -Server $vCenterServer -Confirm:$false
