@@ -117,3 +117,47 @@ foreach ($clusterName in $clusters) {
 Disconnect-ViServer -Server $vCenterServer -Confirm:$false
 
 Write-Host "Configuration complete. Logs can be found at $logFile"
+
+
+# Importing the PowerCLI module
+Import-Module VMware.PowerCLI
+
+# Connecting to the vCenter Server
+$vCenterServer = "ch-sv01993.group.intra"
+$LoginUser = "your-username"
+$LoginPassword = "your-password"
+
+Connect-ViServer -Server $vCenterServer -User $LoginUser -Password $LoginPassword
+
+# List of ESXi hosts to apply the MAC Address Changes setting
+$esxiHosts = @(
+    "esxi-host1.domain.com",
+    "esxi-host2.domain.com",
+    "esxi-host3.domain.com"
+)  # Replace with your ESXi host names
+
+# Log file location
+$logFile = "C:\VMHostSettingsLog.txt"
+
+# Loop through each ESXi host
+foreach ($esxiHost in $esxiHosts) {
+    Write-Host "Configuring MAC Address Changes policy for host: $esxiHost"
+    Add-Content -Path $logFile -Value "Configuring MAC Address Changes policy for host: $esxiHost"
+
+    # Get the host system object
+    $vmHost = Get-VMHost -Name $esxiHost
+    
+    if ($vmHost) {
+        # vSwitch Security Settings for all standard switches
+        $vmHost | Get-VirtualSwitch -Standard | Get-SecurityPolicy | Set-SecurityPolicy -AllowMacChanges $false -Confirm:$false
+        Add-Content -Path $logFile -Value "Set MAC Address Changes to $false on standard virtual switches of $esxiHost"
+    } else {
+        Write-Host "ESXi host $esxiHost not found."
+        Add-Content -Path $logFile -Value "ESXi host $esxiHost not found."
+    }
+}
+
+# Disconnect from vCenter Server
+Disconnect-ViServer -Server $vCenterServer -Confirm:$false
+
+Write-Host "Configuration complete. Logs can be found at $logFile"
