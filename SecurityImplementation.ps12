@@ -161,3 +161,35 @@ foreach ($esxiHost in $esxiHosts) {
 Disconnect-ViServer -Server $vCenterServer -Confirm:$false
 
 Write-Host "Configuration complete. Logs can be found at $logFile"
+
+
+# Importing the PowerCLI module
+Import-Module VMware.PowerCLI
+
+# Connecting to the vCenter Server
+$vCenterServer = "your-vcenter-server"
+$LoginUser = "your-username"
+$LoginPassword = "your-password"
+
+# Connect to vCenter
+Connect-ViServer -Server $vCenterServer -User $LoginUser -Password $LoginPassword
+
+# List of datastore names to retrieve NAA IDs
+$datastoreNames = @("Datastore1", "Datastore2", "Datastore3")  # Replace with your datastore names
+
+# Loop through each datastore name
+foreach ($datastoreName in $datastoreNames) {
+    # Get the datastore object
+    $datastore = Get-Datastore -Name $datastoreName -ErrorAction SilentlyContinue
+    
+    if ($datastore) {
+        # Get the canonical name (NAA ID) of the datastore
+        $naaID = ($datastore.ExtensionData.Info.Vmfs.Extent | Select-Object -First 1).DiskName
+        Write-Host "Datastore: $datastoreName, NAA ID: $naaID"
+    } else {
+        Write-Host "Datastore: $datastoreName not found"
+    }
+}
+
+# Disconnect from vCenter
+Disconnect-ViServer -Server $vCenterServer -Confirm:$false
