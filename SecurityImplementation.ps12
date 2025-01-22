@@ -193,3 +193,56 @@ foreach ($datastoreName in $datastoreNames) {
 
 # Disconnect from vCenter
 Disconnect-ViServer -Server $vCenterServer -Confirm:$false
+
+
+
+# Import PowerCLI module
+Import-Module VMware.PowerCLI
+
+# Connect to vCenter Server
+$vCenterServer = "your-vcenter-server"
+$LoginUser = "your-username"
+$LoginPassword = "your-password"
+
+Connect-ViServer -Server $vCenterServer -User $LoginUser -Password $LoginPassword
+
+# Log file to save output
+$logFile = "C:\RDM_LUN_Report.csv"
+
+# Initialize an array to store RDM details
+$rdmDetails = @()
+
+# Get all virtual machines in the vCenter
+$vms = Get-VM
+
+foreach ($vm in $vms) {
+    Write-Host "Processing VM: $($vm.Name)"
+    
+    # Get RDM hard disks for the VM
+    $rdmDisks = Get-HardDisk -VM $vm | Where-Object {$_.DiskType -eq "RawPhysical" -or $_.DiskType -eq "RawVirtual"}
+    
+    foreach ($rdmDisk in $rdmDisks) {
+        # Get the SCSI LUN backing the RDM disk
+        $scsiLun = Get-ScsiLun -VmHost $vm.VMHost -CanonicalName $rdmDisk.ScsiCanonicalName
+        
+        # Extract storage provider name from the SCSI LUN Vendor property
+        $storageProvider = $scsiLun.Vendor
+        
+        # Add RDM details to the array
+        $rdmDetails += [PSCustomObject]@{
+            VMName          = $vm.Name
+            Datastore       = $rdmDisk.Filename
+            LUNCanonicalName = $rdmDisk.ScsiCanonicalName
+            CapacityGB      = [Math]::Round($rdmDisk.CapacityGB, 2)
+            StorageProvider = $storageProvider
+        }
+    }
+}
+
+# Export RDM details to a CSV file
+$rdmDetails | Export-Csv -Path $logFile -NoTypeInformation -UseCulture
+
+# Disconnect from vCenter Server
+Disconnect-ViServer -Server $vCenterServer -Confirm:$false
+
+Write-Host "RDM LUN report generated at: $logFile"
