@@ -326,3 +326,60 @@ foreach ($lunCanonicalName in $lunCanonicalNames) {
 Disconnect-VIServer -Server $vCenterServer -Confirm:$false
 
 Write-Host "Script execution complete."
+
+
+
+# Import the PowerCLI module
+Import-Module VMware.PowerCLI
+
+# Connect to the vCenter Server
+$vCenterServer = "your-vcenter-server"
+$LoginUser = "your-username"
+$LoginPassword = "your-password"
+
+Connect-VIServer -Server $vCenterServer -User $LoginUser -Password $LoginPassword
+
+# Output CSV file to save the results
+$outputFile = "C:\3PAR_LUNs_Report.csv"
+
+# Initialize an array to store the results
+$lunDetails = @()
+
+# Get all ESXi hosts in the vCenter
+$vmHosts = Get-VMHost
+
+# Loop through each ESXi host
+foreach ($vmHost in $vmHosts) {
+    Write-Host "Processing host: $($vmHost.Name)"
+
+    # Get all the LUNs for the host
+    $scsiLuns = Get-ScsiLun -VmHost $vmHost | Where-Object {
+        $_.Vendor -match "3PAR" -and $_.Model -match "VV" # Filtering for HPE 3PAR LUNs
+    }
+
+    foreach ($scsiLun in $scsiLuns) {
+        # Add LUN details to the array
+        $lunDetails += [PSCustomObject]@{
+            HostName       = $vmHost.Name
+            LUNDisplayName = $scsiLun.DisplayName
+            CanonicalName  = $scsiLun.CanonicalName
+            NAAID          = $scsiLun.CanonicalName
+            CapacityGB     = [Math]::Round($scsiLun.CapacityKB / 1MB, 2)
+            Vendor         = $scsiLun.Vendor
+            Model          = $scsiLun.Model
+        }
+    }
+}
+
+# Export the results to a CSV file
+if ($lunDetails.Count -gt 0) {
+    $lunDetails | Export-Csv -Path $outputFile -NoTypeInformation -UseCulture
+    Write-Host "LUN details exported to $outputFile"
+} else {
+    Write-Host "No HPE 3PAR LUNs found in vCenter."
+}
+
+# Disconnect from the vCenter Server
+Disconnect-VIServer -Server $vCenterServer -Confirm:$false
+
+Write-Host "Script execution completed."
