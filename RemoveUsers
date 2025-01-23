@@ -3,9 +3,9 @@ param (
     [string]$vcFqdn = 'ch-sv01993.group.intra',
     [string]$vcUser = 'Administrator@vs6bjss.local',
     [string]$vcPassword = 'hzZcL$fT8wGz9',
-    [string]$ldapDomain = 'vs6bjss.local',
+    [string]$ldapDomain = 'group.intra',
     [string]$csvFilePath = "C:\Users\ADM_ALPA\Downloads\users.csv",    # Path to CSV file containing list of users
-    [string]$ssoGroup = "BJSS-VM-Power-GVA"       # SSO group to remove users from
+    [string]$ssoGroup = "BJSS-VM-Power-User-DLP"       # SSO group to remove users from
 )
 
 # Connect to the SSO Admin Server
