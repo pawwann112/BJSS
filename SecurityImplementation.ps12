@@ -383,3 +383,65 @@ if ($lunDetails.Count -gt 0) {
 Disconnect-VIServer -Server $vCenterServer -Confirm:$false
 
 Write-Host "Script execution completed."
+
+
+
+# Load VMware PowerCLI module
+Import-Module VMware.PowerCLI
+
+# Define vCenter credentials and cluster details
+$vcenterServer = "vCenter_FQDN"
+$sourceCluster = "Source_Cluster_Name"
+$targetCluster = "Target_Cluster_Name"
+
+# CSV File containing VM list and target hosts (columns: VMName, TargetHost)
+$vmListFile = "C:\Path\To\VMList.csv"
+
+# Connect to vCenter
+Connect-VIServer -Server $vcenterServer
+
+# Load VM list from CSV
+$vmList = Import-Csv -Path $vmListFile
+
+# Loop through the VMs
+foreach ($vm in $vmList) {
+    $vmName = $vm.VMName
+    $targetHostName = $vm.TargetHost
+
+    # Get VM object
+    $vmObj = Get-VM -Name $vmName
+
+    if ($vmObj) {
+        try {
+            # Check if VM is powered off
+            if ($vmObj.PowerState -ne "PoweredOff") {
+                Write-Host "VM $vmName is not powered off. Skipping." -ForegroundColor Yellow
+                continue
+            }
+
+            # Unregister the VM
+            Write-Host "Unregistering VM $vmName from $sourceCluster" -ForegroundColor Yellow
+            $vmxPath = (Get-HardDisk -VM $vmObj | Select-Object -First 1).Filename.Replace(".vmdk", ".vmx")
+            Remove-VM -VM $vmObj -Confirm:$false
+
+            # Ensure the target host exists
+            $targetHost = Get-VMHost -Name $targetHostName
+            if ($targetHost) {
+                # Register the VM on the target host
+                Write-Host "Registering VM $vmName on $targetHostName in $targetCluster" -ForegroundColor Green
+                New-VM -VMFilePath $vmxPath -VMHost $targetHost -Confirm:$false
+            } else {
+                Write-Host "Target host $targetHostName not found. Skipping VM $vmName." -ForegroundColor Red
+            }
+        } catch {
+            Write-Host "Failed to process VM $vmName. Error: $_" -ForegroundColor Red
+        }
+    } else {
+        Write-Host "VM $vmName not found in the inventory. Skipping." -ForegroundColor Red
+    }
+}
+
+# Disconnect from vCenter
+Disconnect-VIServer -Server $vcenterServer -Confirm:$false
+
+Write-Host "Script completed." -ForegroundColor Green
