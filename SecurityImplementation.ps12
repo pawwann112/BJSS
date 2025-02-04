@@ -523,3 +523,81 @@ foreach ($lunCanonicalName in $lunCanonicalNames) {
 Disconnect-VIServer -Server $vCenterServer -Confirm:$false
 
 Write-Host "Script execution complete."
+
+
+# Connect to vCenter Server
+$vCenterServer = ""
+$LoginUser = ""
+$LoginPassword = "your-password"
+
+Connect-VIServer -Server $vCenterServer -User $LoginUser -Password $LoginPassword
+
+# List of ESXi Hosts to Process
+$esxiHosts = @(
+    "esxi-host1.domain.com",
+    "esxi-host2.domain.com",
+    "esxi-host3.domain.com"
+)
+
+# List of LUNs to be removed (Canonical Names)
+$lunCanonicalNames = @(
+    "naa.60002ac0000000000000000000000001",
+    "naa.60002ac0000000000000000000000002",
+    "naa.60002ac0000000000000000000000003"
+)
+
+# Process each ESXi host
+foreach ($esxiHost in $esxiHosts) {
+    Write-Host "Processing Host: $esxiHost"
+
+    # Get VMHost object
+    $vmHost = Get-VMHost -Name $esxiHost
+
+    foreach ($lunCanonicalName in $lunCanonicalNames) {
+        Write-Host "Processing LUN: $lunCanonicalName on Host: $esxiHost"
+
+        # Check if the LUN is mounted as a VMFS datastore
+        $datastore = Get-Datastore | Where-Object { $_.ExtensionData.Info.Vmfs.Extent | Where-Object { $_.DiskName -eq $lunCanonicalName } }
+        if ($datastore) {
+            Write-Host "Datastore found on LUN $lunCanonicalName: $($datastore.Name)"
+
+            # Check if the datastore is in maintenance mode
+            if ($datastore.State -eq "maintenance") {
+                Write-Host "Unmounting Datastore: $($datastore.Name)"
+                $datastore | Set-Datastore -State Unmounted -Confirm:$false
+            } else {
+                Write-Host "Datastore $($datastore.Name) is not in maintenance mode. Skipping unmount."
+                continue
+            }
+        }
+
+        # Detach the LUN from the host
+        $scsiLun = Get-ScsiLun -VmHost $vmHost -CanonicalName $lunCanonicalName
+        if ($scsiLun -and $scsiLun.State -eq "Attached") {
+            Write-Host "Detaching LUN: $lunCanonicalName from Host: $esxiHost"
+            Remove-ScsiLun -ScsiLun $scsiLun -Confirm:$false
+        } else {
+            Write-Host "LUN $lunCanonicalName is already detached from Host: $esxiHost"
+        }
+    }
+}
+
+# Remove permanently detached LUNs from each ESXi host
+Write-Host "Removing permanently detached LUNs..."
+foreach ($esxiHost in $esxiHosts) {
+    $vmHost = Get-VMHost -Name $esxiHost
+    foreach ($lunCanonicalName in $lunCanonicalNames) {
+        $detachedLun = Get-ScsiLun -VmHost $vmHost | Where-Object { $_.CanonicalName -eq $lunCanonicalName -and $_.State -eq "NotPresent" }
+        if ($detachedLun) {
+            Write-Host "Removing LUN: $lunCanonicalName from Host: $esxiHost"
+            Remove-ScsiLun -ScsiLun $detachedLun -Confirm:$false
+        } else {
+            Write-Host "LUN $lunCanonicalName not found or already removed from Host: $esxiHost"
+        }
+    }
+}
+
+# Disconnect from vCenter Server
+Disconnect-VIServer -Server $vCenterServer -Confirm:$false
+
+Write-Host "Script execution complete."
