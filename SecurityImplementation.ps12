@@ -601,3 +601,42 @@ foreach ($esxiHost in $esxiHosts) {
 Disconnect-VIServer -Server $vCenterServer -Confirm:$false
 
 Write-Host "Script execution complete."
+
+
+
+# Import the required PowerCLI modules
+Import-Module VMware.PowerCLI
+Import-Module VMware.vSphere.SsoAdmin
+
+# Connect to vCenter Server
+$vCenter = "vcenter.example.com"
+$username = "administrator@vsphere.local"
+$password = "YourAdminPassword"
+
+Connect-VIServer -Server $vCenter -User $username -Password $password
+
+# Path to the CSV file containing user details
+$csvPath = "C:\path\to\users.csv"
+
+# Import the CSV file
+$users = Import-Csv -Path $csvPath
+
+# Loop through each user and create them in the SSO domain
+foreach ($user in $users) {
+    $username = $user.Username
+    $password = $user.Password
+    $description = $user.Description
+
+    # Create the SSO user
+    try {
+        New-SsoPersonUser -UserName $username -Password $password -Description $description -Confirm:$false
+        Write-Host "User '$username' created successfully in the SSO domain."
+    } catch {
+        Write-Host "Failed to create user '$username': $_"
+    }
+}
+
+# Disconnect from vCenter Server
+Disconnect-VIServer -Confirm:$false
+
+Write-Host "All users have been processed."
