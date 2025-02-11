@@ -70,3 +70,65 @@ foreach ($esxiHost in $esxiHosts) {
 Disconnect-VIServer -Server $vCenterServer -Confirm:$false
 
 Write-Host "Script execution complete."
+
+
+
+
+
+# Connecting to the vCenter Server
+$vCenterServer = "ch-sv01993.group.intra"
+$LoginUser = "adm_alpa@group.intra"
+
+
+Connect-VIServer -Server $vCenterServer 
+
+# List of clusters to apply the settings
+$clusters = @("AE-VSAN","BS-VSAN","FR-VSAN","GG-VSAN","GI-VSAN","HK-VSAN","IL-VSAN","LU-VSAN","MC-VSAN","UK-VSAN")  # Replace with your cluster names
+
+# Log file location
+$logFile = "C:\VMHostSettingsLog.txt"
+
+# Loop through each cluster
+foreach ($clusterName in $clusters) {
+    Write-Host "Processing cluster: $clusterName"
+    
+    # Get all hosts in the current cluster
+    $vmHosts = Get-Cluster -Name $clusterName | Get-VMHost
+    
+    foreach ($vmHost in $vmHosts) {
+        Write-Host "Configuring host: $($vmHost.Name)"
+        Add-Content -Path $logFile -Value "Configuring host: $($vmHost.Name) in cluster: $clusterName"
+
+        # Define a hashtable of settings to apply
+        $settings = @{
+            "Security.AccountUnlockTime" = 900
+            "Security.AccountLockFailures" = 3
+            "Security.PasswordHistory" = 5
+            "Security.PasswordQualityControl" = "retry=3 min=disabled,disabled,disabled,14,14"
+            "UserVars.DcuiTimeOut" = 600
+            "UserVars.ESXiShellInteractiveTimeOut" = 600
+            "UserVars.ESXiShellTimeOut" = 600
+            "UserVars.SuppressShellWarning" = 0
+            "Syslog.global.logHost" = "udp://160.219.63.155:514"
+        }
+        
+        # Apply each setting
+        foreach ($setting in $settings.GetEnumerator()) {
+            $advancedSetting = $vmHost | Get-AdvancedSetting -Name $setting.Key
+            $advancedSetting | Set-AdvancedSetting -Value $setting.Value -Confirm:$false
+            Add-Content -Path $logFile -Value "Set $($setting.Key) to $($setting.Value) on $($vmHost.Name)"
+        }
+        
+        # vSwitch Security Settings
+       # $vmHost | Get-VirtualSwitch -Standard | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmits $false -Confirm:$false
+       # Add-Content -Path $logFile -Value "Set ForgedTransmits to $false on virtual switches of $($vmHost.Name)"
+        
+       # $vmHost | Get-VirtualPortGroup -Standard | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmitsInherited $true -Confirm:$false
+        #Add-Content -Path $logFile -Value "Set ForgedTransmitsInherited to $true on virtual port groups of $($vmHost.Name)"
+    }
+}
+
+# Disconnect from vCenter Server
+Disconnect-ViServer -Server $vCenterServer -Confirm:$false
+
+Write-Host "Configuration complete. Logs can be found at $logFile"
