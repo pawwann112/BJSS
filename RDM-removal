@@ -1,18 +1,18 @@
-9# Connect to vCenter Server
+# Connect to vCenter Server
 $vCenterServer = "ch-sv01993.group.intra"
 $LoginUser = "adm_alpa@group.intra"
-$LoginPassword = ""
+$LoginPassword = "MUZlDJmZPJdH2"
 
 Connect-VIServer -Server $vCenterServer -User $LoginUser -Password $LoginPassword
 
 # List of ESXi Hosts to Process
 $esxiHosts = @(
-"ch-esx00004.group.intra","ch-esx01004.group.intra","esxt430.group.intra","esxt530.group.intra","esxt431.group.intra","esxt531.group.intra","ch-esx00005.group.intra","ch-esx01005.group.intra","ch-esx01033.group.intra","ch-esx00033.group.intra"
+"ch-esx01029.group.intra","ch-esx01028.group.intra","ch-esx00028.group.intra","ch-esx00029.group.intra","esxp151.group.intra","esxp50.group.intra","esxp51.group.intra","esxp150.group.intra","ch-esx01032.group.intra","esxp170.group.intra","ch-esx00032.group.intra","esxp70.group.intra","esxd191.group.intra","esxd190.group.intra","esxd90.group.intra","esxd91.group.intra","esxd170.group.intra","esxd71.group.intra","esxd70.group.intra","esxd171.group.intra","esxd281.group.intra","ch-esx01025.group.intra","ch-esx01027.group.intra","esxd381.group.intra","ch-esx00027.group.intra","ch-esx01026.group.intra","ch-esx00026.group.intra","ch-esx00025.group.intra","ch-esx00030.group.intra","ch-esx00031.group.intra","ch-esx01031.group.intra","ch-esx01030.group.intra","ch-esx00009.group.intra","esxd530.group.intra","ch-esx01009.group.intra","ch-esx01010.group.intra","esxd430.group.intra","ch-esx00010.group.intra","ch-esx00014.group.intra","ch-esx01014.group.intra","ch-esx01013.group.intra","ch-esx00013.group.intra","ch-esx00012.group.intra","ch-esx01012.group.intra","ch-esx00011.group.intra","ch-esx01011.group.intra","ch-esx01002.group.intra","ch-esx00003.group.intra","ch-esx01003.group.intra","ch-esx00002.group.intra","ch-esx00059.group.intra","ch-esx01059.group.intra","ch-esx00008.group.intra","ch-esx01008.group.intra","ch-esx01034.group.intra","ch-esx00034.group.intra","ch-esx01007.group.intra","ch-esx00007.group.intra"
 )
 
 # List of LUNs to be removed (Canonical Names)
 $lunCanonicalNames = @(
-    "naa.60002ac00000000000002eb000019bb2","naa.60002ac00000000000000be500019780","naa.60002ac0000000000000303500019780","naa.60002ac00000000000002eaf00019bb2","naa.60002ac00000000000000a9800019bb2","naa.60002ac0000000000000303400019780","naa.60002ac000000000000132670001977d","naa.60002ac0000000000000251d00019780","naa.60002ac0000000000101475300019979","naa.60002ac000000000000132660001977d","naa.60002ac00000000000002abf00019780","naa.2ff70002ac019979","naa.2ff70002ac01977d","naa.60002ac000000000000023a000019bb2","naa.2ff70002ac019780","naa.2ff70002ac019bb2","naa.60002ac000000000000029900001977d","naa.60002ac00000000000000a550001977d","naa.60002ac00000000000000a2e0001977d","naa.60002ac0000000000000005100019979","naa.60002ac00000000000000a320001977d","naa.60002ac00000000000000a2d0001977d","naa.60002ac0000000000000298f0001977d","naa.60002ac00000000000000a310001977d","naa.60002ac000000000000119eb00019979","naa.60002ac000000000000001370001977d","naa.60002ac0000000000000014500019979","naa.60002ac00000000000000a300001977d","naa.60002ac0000000000000014400019979","naa.60002ac000000000000001b30001977d","naa.60002ac00000000000000a2f0001977d","naa.60002ac0000000000000943f0001977d","naa.60002ac000000000000001b20001977d","naa.60002ac0000000000001239000019979","naa.60002ac000000000000091370001977d","naa.60002ac000000000000091360001977d","naa.60002ac00000000000019e2f00019979","naa.60002ac00000000000019e8f00019979"
+    "naa.60002ac000000000000022f200019bb2","naa.60002ac0000000000000027700019bb2","naa.60002ac00000000000001d0900019bb2","naa.60002ac0000000000000039c00019780","naa.60002ac00000000000000be500019780","naa.60002ac00000000000001d6d00019bb2","naa.60002ac00000000000002ea000019bb2","naa.60002ac00000000000001efd00019780","naa.60002ac0000000000000015400019bb2","naa.60002ac000000000000019eb00019bb2","naa.60002ac00000000000001b8a00019780","naa.60002ac0000000000000028800019780","naa.60002ac0000000000000015300019bb2","naa.60002ac00000000000002cc200019780","naa.2ff70002ac019780","naa.2ff70002ac019bb2","naa.60002ac00000000000000a9800019bb2","naa.2ff70002ac01977d","naa.60002ac0000000000000294900019bb2","naa.60002ac0000000000000031f00019780","naa.60002ac000000000000001e200019bb2","naa.60002ac000000000000001dd00019bb2","naa.60002ac0000000000000294800019bb2","naa.60002ac0000000000000297300019bb2","naa.60002ac0000000000000298100019bb2","naa.60002ac0000000000000031e00019780","naa.60002ac0000000000000280400019bb2","naa.60002ac00000000000002ad400019780","naa.60002ac000000000000027d900019780","naa.60002ac0000000000000032100019780","naa.60002ac00000000000002ad200019780","naa.60002ac00000000000002acd00019780","naa.60002ac000000000000027f100019bb2","naa.60002ac0000000000000012100019780","naa.60002ac0000000000000027c00019780","naa.60002ac0000000000000014800019bb2","naa.60002ac0000000000000001300019bb2","naa.60002ac0000000000000026900019780","naa.60002ac0000000000000027b00019780","naa.60002ac0000000000000013900019bb2","naa.60002ac0000000000000013d00019bb2","naa.60002ac0000000000000014700019bb2","naa.60002ac0000000000000026800019780","naa.60002ac000000000000018bd00019bb2","naa.60002ac0000000000000027a00019780","naa.60002ac0000000000000013800019bb2","naa.60002ac0000000000000013c00019bb2","naa.60002ac0000000000000026700019780","naa.60002ac0000000000000026b00019780","naa.60002ac000000000000010a600019780","naa.60002ac0000000000000013700019bb2","naa.60002ac0000000000000055000019bb2","naa.60002ac0000000000000013b00019bb2","naa.60002ac0000000000000026600019780","naa.60002ac0000000000000026a00019780","naa.60002ac00000000000000f2800019bb2","naa.60002ac0000000000000039500019780","naa.60002ac0000000000000013600019bb2","naa.60002ac0000000000000026f00019bb2","naa.60002ac0000000000000013a00019bb2","naa.60002ac0000000000000012200019780","naa.60002ac0000000000000026500019780","naa.60002ac0000000000000014900019bb2","naa.60002ac0000000000000001400019bb2","naa.60002ac00000000000001dd000019bb2","naa.60002ac0000000000000013500019bb2","naa.60002ac0000000000000280600019780","naa.60002ac00000000000002acf00019780","naa.60002ac0000000000000317700019bb2","naa.60002ac0000000000000294600019bb2","naa.60002ac000000000000028e600019bb2","naa.60002ac00000000000001dc600019bb2","naa.60002ac00000000000001dc500019bb2","naa.60002ac00000000000001dc400019bb2"
 )
 
 # Process each ESXi host
@@ -28,7 +28,8 @@ foreach ($esxiHost in $esxiHosts) {
         # Check if the LUN is mounted as a VMFS datastore
         $datastore = Get-Datastore | Where-Object { $_.ExtensionData.Info.Vmfs.Extent | Where-Object { $_.DiskName -eq $lunCanonicalName } }
         if ($datastore) {
-            Write-Host "Datastore found on LUN $lunCanonicalName: $($datastore.Name)"
+
+            Write-Host "Datastore found on LUN" $lunCanonicalName : $($datastore.Name)"
 
             # Check if the datastore is in maintenance mode
             if ($datastore.State -eq "maintenance") {
@@ -38,7 +39,8 @@ foreach ($esxiHost in $esxiHosts) {
                 Write-Host "Datastore $($datastore.Name) is not in maintenance mode. Skipping unmount."
                 continue
             }
-        }
+             
+        
 
         # Detach the LUN from the host
         $scsiLun = Get-ScsiLun -VmHost $vmHost -CanonicalName $lunCanonicalName
@@ -60,130 +62,6 @@ foreach ($esxiHost in $esxiHosts) {
         if ($detachedLun) {
             Write-Host "Removing LUN: $lunCanonicalName from Host: $esxiHost"
             Remove-ScsiLun -ScsiLun $detachedLun -Confirm:$false
-        } else {
-            Write-Host "LUN $lunCanonicalName not found or already removed from Host: $esxiHost"
-        }
-    }
-}
-
-# Disconnect from vCenter Server
-Disconnect-VIServer -Server $vCenterServer -Confirm:$false
-
-Write-Host "Script execution complete."
-
-
-# Connect to vCenter Server
-$vCenterServer = "ch-sv01993.group.intra"
-$LoginUser = "adm_alpa@group.intra"
-$LoginPassword = ""  # Ensure this is populated securely, e.g., using Get-Credential
-
-# Connect to vCenter
-try {
-    Connect-VIServer -Server $vCenterServer -User $LoginUser -Password $LoginPassword -ErrorAction Stop
-} catch {
-    Write-Host "Failed to connect to vCenter Server: $_" -ForegroundColor Red
-    exit
-}
-
-# List of ESXi Hosts to Process
-$esxiHosts = @(
-    "ch-esx00004.group.intra", "ch-esx01004.group.intra", "esxt430.group.intra", "esxt530.group.intra", 
-    "esxt431.group.intra", "esxt531.group.intra", "ch-esx00005.group.intra", "ch-esx01005.group.intra", 
-    "ch-esx01033.group.intra", "ch-esx00033.group.intra"
-)
-
-# List of LUNs to be removed (Canonical Names)
-$lunCanonicalNames = @(
-    "naa.60002ac00000000000002eb000019bb2", "naa.60002ac00000000000000be500019780", 
-    "naa.60002ac0000000000000303500019780", "naa.60002ac00000000000002eaf00019bb2", 
-    "naa.60002ac00000000000000a9800019bb2", "naa.60002ac0000000000000303400019780", 
-    "naa.60002ac000000000000132670001977d", "naa.60002ac0000000000000251d00019780", 
-    "naa.60002ac0000000000101475300019979", "naa.60002ac000000000000132660001977d", 
-    "naa.60002ac00000000000002abf00019780", "naa.2ff70002ac019979", 
-    "naa.2ff70002ac01977d", "naa.60002ac000000000000023a000019bb2", 
-    "naa.2ff70002ac019780", "naa.2ff70002ac019bb2", "naa.60002ac000000000000029900001977d", 
-    "naa.60002ac00000000000000a550001977d", "naa.60002ac00000000000000a2e0001977d", 
-    "naa.60002ac0000000000000005100019979", "naa.60002ac00000000000000a320001977d", 
-    "naa.60002ac00000000000000a2d0001977d", "naa.60002ac0000000000000298f0001977d", 
-    "naa.60002ac00000000000000a310001977d", "naa.60002ac000000000000119eb00019979", 
-    "naa.60002ac000000000000001370001977d", "naa.60002ac0000000000000014500019979", 
-    "naa.60002ac00000000000000a300001977d", "naa.60002ac0000000000000014400019979", 
-    "naa.60002ac000000000000001b30001977d", "naa.60002ac00000000000000a2f0001977d", 
-    "naa.60002ac0000000000000943f0001977d", "naa.60002ac000000000000001b20001977d", 
-    "naa.60002ac0000000000001239000019979", "naa.60002ac000000000000091370001977d", 
-    "naa.60002ac000000000000091360001977d", "naa.60002ac00000000000019e2f00019979", 
-    "naa.60002ac00000000000019e8f00019979"
-)
-
-# Process each ESXi host
-foreach ($esxiHost in $esxiHosts) {
-    Write-Host "Processing Host: $esxiHost"
-
-    # Get VMHost object
-    try {
-        $vmHost = Get-VMHost -Name $esxiHost -ErrorAction Stop
-    } catch {
-        Write-Host "Failed to retrieve VMHost $esxiHost: $_" -ForegroundColor Red
-        continue
-    }
-
-    foreach ($lunCanonicalName in $lunCanonicalNames) {
-        Write-Host "Processing LUN: $lunCanonicalName on Host: $esxiHost"
-
-        # Check if the LUN is mounted as a VMFS datastore
-        $datastore = Get-Datastore | Where-Object { $_.ExtensionData.Info.Vmfs.Extent | Where-Object { $_.DiskName -eq $lunCanonicalName } }
-        if ($datastore) {
-            Write-Host "Datastore found on LUN $lunCanonicalName: $($datastore.Name)"
-
-            # Check if the datastore is in maintenance mode
-            if ($datastore.State -eq "maintenance") {
-                Write-Host "Unmounting Datastore: $($datastore.Name)"
-                try {
-                    $datastore | Set-Datastore -State Unmounted -Confirm:$false -ErrorAction Stop
-                } catch {
-                    Write-Host "Failed to unmount datastore $($datastore.Name): $_" -ForegroundColor Red
-                    continue
-                }
-            } else {
-                Write-Host "Datastore $($datastore.Name) is not in maintenance mode. Skipping unmount."
-                continue
-            }
-        }
-
-        # Detach the LUN from the host
-        $scsiLun = Get-ScsiLun -VmHost $vmHost -CanonicalName $lunCanonicalName
-        if ($scsiLun -and $scsiLun.State -eq "Attached") {
-            Write-Host "Detaching LUN: $lunCanonicalName from Host: $esxiHost"
-            try {
-                Remove-ScsiLun -ScsiLun $scsiLun -Confirm:$false -ErrorAction Stop
-            } catch {
-                Write-Host "Failed to detach LUN $lunCanonicalName: $_" -ForegroundColor Red
-            }
-        } else {
-            Write-Host "LUN $lunCanonicalName is already detached from Host: $esxiHost"
-        }
-    }
-}
-
-# Remove permanently detached LUNs from each ESXi host
-Write-Host "Removing permanently detached LUNs..."
-foreach ($esxiHost in $esxiHosts) {
-    try {
-        $vmHost = Get-VMHost -Name $esxiHost -ErrorAction Stop
-    } catch {
-        Write-Host "Failed to retrieve VMHost $esxiHost: $_" -ForegroundColor Red
-        continue
-    }
-
-    foreach ($lunCanonicalName in $lunCanonicalNames) {
-        $detachedLun = Get-ScsiLun -VmHost $vmHost | Where-Object { $_.CanonicalName -eq $lunCanonicalName -and $_.State -eq "NotPresent" }
-        if ($detachedLun) {
-            Write-Host "Removing LUN: $lunCanonicalName from Host: $esxiHost"
-            try {
-                Remove-ScsiLun -ScsiLun $detachedLun -Confirm:$false -ErrorAction Stop
-            } catch {
-                Write-Host "Failed to remove LUN $lunCanonicalName: $_" -ForegroundColor Red
-            }
         } else {
             Write-Host "LUN $lunCanonicalName not found or already removed from Host: $esxiHost"
         }
