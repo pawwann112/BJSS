@@ -132,3 +132,57 @@ foreach ($clusterName in $clusters) {
 Disconnect-ViServer -Server $vCenterServer -Confirm:$false
 
 Write-Host "Configuration complete. Logs can be found at $logFile"
+
+
+
+
+# Define vCenter details
+$vCenterServer = "ch-sv01993.group.intra"
+$LoginUser = "adm_alpa@group.intra"
+
+# Connect to vCenter
+Connect-VIServer -Server $vCenterServer 
+
+# Log file location
+$logFile = "C:\VMHostSettingsLog.txt"
+
+# Get all ESXi hosts in vCenter
+$vmHosts = Get-VMHost
+
+# Loop through each ESXi host
+foreach ($vmHost in $vmHosts) {
+    Write-Host "Configuring host: $($vmHost.Name)"
+    Add-Content -Path $logFile -Value "Configuring host: $($vmHost.Name)"
+
+    # Define a hashtable of settings to apply
+    $settings = @{
+        "Security.AccountUnlockTime" = 900
+        "Security.AccountLockFailures" = 3
+        "Security.PasswordHistory" = 5
+        "Security.PasswordQualityControl" = "retry=3 min=disabled,disabled,disabled,14,14"
+        "UserVars.DcuiTimeOut" = 600
+        "UserVars.ESXiShellInteractiveTimeOut" = 600
+        "UserVars.ESXiShellTimeOut" = 600
+        "UserVars.SuppressShellWarning" = 0
+        "Syslog.global.logHost" = "udp://160.219.63.155:514"
+    }
+    
+    # Apply each setting
+    foreach ($setting in $settings.GetEnumerator()) {
+        $advancedSetting = $vmHost | Get-AdvancedSetting -Name $setting.Key
+        $advancedSetting | Set-AdvancedSetting -Value $setting.Value -Confirm:$false
+        Add-Content -Path $logFile -Value "Set $($setting.Key) to $($setting.Value) on $($vmHost.Name)"
+    }
+    
+    # vSwitch Security Settings (Uncomment if needed)
+    # $vmHost | Get-VirtualSwitch -Standard | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmits $false -Confirm:$false
+    # Add-Content -Path $logFile -Value "Set ForgedTransmits to $false on virtual switches of $($vmHost.Name)"
+    
+    # $vmHost | Get-VirtualPortGroup -Standard | Get-SecurityPolicy | Set-SecurityPolicy -ForgedTransmitsInherited $true -Confirm:$false
+    # Add-Content -Path $logFile -Value "Set ForgedTransmitsInherited to $true on virtual port groups of $($vmHost.Name)"
+}
+
+# Disconnect from vCenter Server
+Disconnect-ViServer -Server $vCenterServer -Confirm:$false
+
+Write-Host "Configuration complete. Logs can be found at $logFile"
