@@ -640,3 +640,20 @@ foreach ($user in $users) {
 Disconnect-VIServer -Confirm:$false
 
 Write-Host "All users have been processed."
+
+
+param (
+    [string]$vcFqdn = 'ch-sv01993.group.intra',
+    [string]$vcUser = 'Administrator@vs6bjss.local',
+    [string]$vcPassword = 'hzZcL$fT8wGz9',
+    [string]$ldapDomain = 'vs6bjss.local',
+    [string]$csvFilePath = "C:\Users\ADM_ALPA\Downloads\users.csv" ,    # Path to CSV file containing list of users
+    [string]$ssoGroup = "BJSS-VM-Power-User-DMZ"       # SSO group to add users to
+)
+
+# Connect to the SSO Admin Server
+$ssoConnection = Connect-SsoAdminServer -Server $vcFqdn -User $vcUser -Password $vcPassword -SkipCertificateCheck
+
+New-SsoPersonUser -UserName "test_user"  -Description "this is a test user" -EmailAddress "test@group.intra" -FirstName "test" -LastName "user1" -Server $ssoConnection
+
+Disconnect-SsoAdminServer -Server $ssoConnection
