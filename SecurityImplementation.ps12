@@ -657,3 +657,39 @@ $ssoConnection = Connect-SsoAdminServer -Server $vcFqdn -User $vcUser -Password 
 New-SsoPersonUser -UserName "test_user"  -Description "this is a test user" -EmailAddress "test@group.intra" -FirstName "test" -LastName "user1" -Server $ssoConnection
 
 Disconnect-SsoAdminServer -Server $ssoConnection
+
+
+
+
+param (
+    [string]$vcFqdn = 'ch-sv01993.group.intra',
+    [string]$vcUser = 'Administrator@vs6bjss.local',
+    [string]$vcPassword = 'hzZcL$fT8wGz9',
+    [string]$ldapDomain = 'vs6bjss.local',
+    [string]$csvFilePath = "C:\Users\ADM_ALPA\Downloads\users.csv",  # Path to CSV file containing list of users
+    [string]$ssoGroup = "BJSS-VM-Power-User-DMZ"  # SSO group to add users to
+)
+
+# Connect to the SSO Admin Server
+$ssoConnection = Connect-SsoAdminServer -Server $vcFqdn -User $vcUser -Password $vcPassword -SkipCertificateCheck
+
+# Import users from CSV
+$users = Import-Csv -Path $csvFilePath
+
+foreach ($user in $users) {
+    $username = $user.UserName
+    $password = $user.Password
+    $description = $user.Description
+    $email = $user.EmailAddress
+    $firstname = $user.FirstName
+    $lastname = $user.LastName
+    
+    # Create SSO User with Password
+    New-SsoPersonUser -UserName $username -Password (ConvertTo-SecureString -String $password -AsPlainText -Force) -Description $description -EmailAddress $email -FirstName $firstname -LastName $lastname -Server $ssoConnection
+    
+    # Add user to SSO group
+    Add-SsoGroupMember -Group $ssoGroup -Members @("$ldapDomain\$username") -Server $ssoConnection
+}
+
+# Disconnect from the SSO Admin Server
+Disconnect-SsoAdminServer -Server $ssoConnection
